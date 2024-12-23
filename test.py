@@ -1,2 +1,2 @@
-for index in range(1,8, 2):
+for index in range(1,8):
     print(index)
