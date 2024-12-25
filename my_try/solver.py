@@ -1,10 +1,10 @@
 import copy
 import random
-from decorators import update_white_sides_after
+from utils import update_white_sides_after
 class CubeSolver( ):
-    def __init__( self, cube ):
+    def __init__( self, cube= None ):
         self.cube = cube
-        self.initialize_cube()
+        # self.initialize_cube()
         self.white_sides = self.find_white_sides()
         self.steps = []
 
@@ -113,7 +113,7 @@ class CubeSolver( ):
         for face, color in face_colors.items():
             for index in range(9):
                 self.cube[face][index] = color
-        print(self.cube)
+        return self.cube
 
     def scramble( self ):
         sides = ['U', 'L', 'F', 'R', 'B', 'D']
@@ -123,6 +123,7 @@ class CubeSolver( ):
             side = random.choice(sides)
             rotation = random.choice(rotations)
             self.cube = self.rotate_face(side, rotation)
+        return self.cube
         
 
     def find_white_sides( self ):

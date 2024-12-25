@@ -29,37 +29,33 @@ struct MotorCommand {
   int steps;
 };
 
-// Manual queue implementation
+// Command queue
 MotorCommand commandQueue[QUEUE_SIZE];
-int queueHead = 0;  // Points to the next command to be processed
-int queueTail = 0;  // Points to the next free slot in the queue
-bool isQueueFull = false;
+int queueSize = 0;  // Tracks the current size of the queue
+int totalCommands = 0;  // Tracks the total number of commands to be received
 
 // Function to add a command to the queue
-bool enqueue(MotorCommand command) {
-  if (isQueueFull) {
+bool enqueue(const MotorCommand& command) {
+  if (queueSize >= QUEUE_SIZE) {
     Serial.println("Queue is full, cannot add command");
     return false;
   }
-
-  commandQueue[queueTail] = command;
-  queueTail = (queueTail + 1) % QUEUE_SIZE;
-  if (queueTail == queueHead) {
-    isQueueFull = true;  // Queue is now full
-  }
+  commandQueue[queueSize] = command;
+  queueSize++;
   return true;
 }
 
 // Function to remove a command from the queue
-bool dequeue(MotorCommand &command) {
-  if (queueHead == queueTail && !isQueueFull) {
+bool dequeue(MotorCommand& command) {
+  if (queueSize == 0) {
     Serial.println("Queue is empty");
     return false;
   }
-
-  command = commandQueue[queueHead];
-  queueHead = (queueHead + 1) % QUEUE_SIZE;
-  isQueueFull = false;
+  command = commandQueue[0];
+  for (int i = 1; i < queueSize; i++) {
+    commandQueue[i - 1] = commandQueue[i];
+  }
+  queueSize--;
   return true;
 }
 
@@ -74,8 +70,8 @@ void rotateStepper(int pullPin, int dirPin, int steps, int direction) {
   }
 }
 
-// Function to process and execute a single command
-void processCommand(MotorCommand command) {
+// Function to process a single command
+void processCommand(const MotorCommand& command) {
   int pullPin, dirPin, dirSignal;
 
   // Map motor names to pins
@@ -117,35 +113,35 @@ void processCommand(MotorCommand command) {
 }
 
 void setup() {
-  Serial.begin(9600);
-
-  // Set all motor pins as outputs
+  Serial.begin(115200);
   pinMode(PULL_RIGHT, OUTPUT);
   pinMode(DIR_RIGHT, OUTPUT);
-
   pinMode(PULL_DOWN, OUTPUT);
   pinMode(DIR_DOWN, OUTPUT);
-
   pinMode(PULL_LEFT, OUTPUT);
   pinMode(DIR_LEFT, OUTPUT);
-
   pinMode(PULL_TOP, OUTPUT);
   pinMode(DIR_TOP, OUTPUT);
-
   pinMode(PULL_FRONT, OUTPUT);
   pinMode(DIR_FRONT, OUTPUT);
-
   pinMode(PULL_BACK, OUTPUT);
   pinMode(DIR_BACK, OUTPUT);
 }
 
 void loop() {
-  // Check for new commands via serial
   if (Serial.available() > 0) {
-    String input = Serial.readStringUntil('\n');
-    input.trim();  // Remove any whitespace
+    // If the total number of commands has not been received yet
+    if (totalCommands == 0) {
+      totalCommands = Serial.readStringUntil('\n').toInt();  // Read the number of commands
+      queueSize = 0;  // Reset the queue size
+      Serial.println("OK");
+      return;
+    }
 
-    // Parse the input string (e.g., "FRONT,CW,1600")
+    // Process incoming commands
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+
     int comma1 = input.indexOf(',');
     int comma2 = input.indexOf(',', comma1 + 1);
 
@@ -159,15 +155,20 @@ void loop() {
     command.direction = input.substring(comma1 + 1, comma2);
     command.steps = input.substring(comma2 + 1).toInt();
 
-    // Add the command to the queue
-    enqueue(command);
-  }
+    if (enqueue(command)) {
+      Serial.println("OK");
+    }
 
-  // Process the next command in the queue
-  if (queueHead != queueTail || isQueueFull) {
-    MotorCommand command;
-    if (dequeue(command)) {
-      processCommand(command);
+    // Once all commands are received, process the queue
+    if (queueSize == totalCommands) {
+      while (queueSize > 0) {
+        MotorCommand cmd;
+        if (dequeue(cmd)) {
+          processCommand(cmd);
+          Serial.println("OK");
+        }
+      }
+      totalCommands = 0;  // Reset for the next batch of commands
     }
   }
 }

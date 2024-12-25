@@ -7,7 +7,7 @@ import copy
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     c = CubeSolver(None)
-    c.initialize_cube()
+
     # c.cube['F'] = ['B', 'Y', 'Y', 'R', 'B', 'Y', 'B', 'B', 'B']
     # c.cube['R'] = ['R', 'O', 'B', 'O', 'R', 'G', 'R', 'R', 'R']
     # c.cube['B'] = ['O', 'R', 'Y', 'B', 'G', 'Y', 'G', 'G', 'G']
@@ -27,6 +27,7 @@ if __name__ == '__main__':
 
     print('before optimization',len(verified_steps))
     optimized_steps = c.optimize_steps(verified_steps)
+    print('optimized steps',optimized_steps)    
     print('after optimization',len(optimized_steps))
 
     window = CubeVisualizer(c.cube, title='ver1')
